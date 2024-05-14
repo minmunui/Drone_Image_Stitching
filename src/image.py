@@ -1,3 +1,4 @@
+import sys
 import os
 import time
 import threading
@@ -5,7 +6,7 @@ import cv2
 import numpy as np
 
 data_dir = 'data'
-image_dir = '1_sep_src_storage'
+image_dir = 'src1'
 dst_dir = 'dst'
 
 cv2.ocl.setUseOpenCL(False)

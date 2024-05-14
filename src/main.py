@@ -23,6 +23,7 @@ import numpy as np
 filename = 'src1.jpg'
 image = cv2.imread(filename, cv2.COLOR_BGR2BGRA)
 image_with_alpha = cv2.cvtColor(image, cv2.COLOR_BGR2BGRA)
+# image_with_alpha 보기
 
 width, height = image.shape[:2]
 
@@ -30,10 +31,10 @@ for i in range(width):
     for j in range(height):
         r, g, b, a = image_with_alpha[i][j]
         if r == 0 and g == 0 and b == 0:
-            image_with_alpha[i][j] = [0, 0, 0, 0]
+            image_with_alpha[i][j][3] = 0
 
 # 새로운 이미지 생성, 검정색은 투명도가 0
-dst_name = f'{filename.split()[0]}_trim.png'
+dst_name = f'{filename.split(".")[0]}_trim.png'
 print(f"dst_name : {dst_name}")
 cv2.imwrite(dst_name, image_with_alpha)
 # 결과 표시
