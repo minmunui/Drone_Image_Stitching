@@ -1,3 +1,4 @@
+import datetime
 import os
 
 import cv2
@@ -34,7 +35,9 @@ def remove_black_with_iterate(image):
     return image
 
 
-def stitch_image(src_dir, dst_dir=None, crop_level=1):
+def stitch_image(src_dir, dst_dir=None, crop_level=0, pano_confident_thresh=1.0):
+    # 현재 시각
+    print("현재 시각 : ", datetime.datetime.now())
     if dst_dir is None:
         dst_dir = src_dir + "_stitched"
     base_path = os.getcwd()
@@ -45,23 +48,32 @@ def stitch_image(src_dir, dst_dir=None, crop_level=1):
     file_names = os.listdir(image_path)
 
     print(f"detected [{len(file_names)}] files : {file_names}")
+    dst_path = os.path.join(base_path, "output", f"{dst_dir}")
 
     images = []
+    index = 0
 
     for name in file_names:
         img_path = os.path.join(image_path, name)
         print(f"loading : {img_path}")
         img = cv2.imread(img_path)
+        for i in range(crop_level):
+            img = cv2.pyrDown(img)
+        # down된 이미지 저장
+        # cv2.imwrite(f'{dst_path}_down_{index}.jpg', img)
         images.append(img)
+        index += 1
 
-    stitcher = cv2.Stitcher.create()
+    stitcher = cv2.Stitcher.create(mode=cv2.Stitcher_SCANS)
+    # stitcher.setPanoConfidenceThresh(pano_confident_thresh)
     status, stitched_image = stitcher.stitch(images)
 
     if status == cv2.Stitcher_OK:
-        dst_path = os.path.join(base_path, "output", f"{dst_dir}")
+
         print(f'Stitched image will be saved : {dst_path}')
         cv2.imwrite(f'{dst_path}.jpg', stitched_image)
     else:
         print("스티칭 실패")
 
-    cv2.Stitcher.create()
+    # 현재 시각을 출력
+    print("현재 시각 : ", datetime.datetime.now())
