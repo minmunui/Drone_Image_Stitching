@@ -34,7 +34,7 @@ def remove_black_with_iterate(image):
     return image
 
 
-def stitch_image(src_dir, dst_dir=None):
+def stitch_image(src_dir, dst_dir=None, crop_level=1):
     if dst_dir is None:
         dst_dir = src_dir + "_stitched"
     base_path = os.getcwd()
@@ -63,3 +63,5 @@ def stitch_image(src_dir, dst_dir=None):
         cv2.imwrite(f'{dst_path}.jpg', stitched_image)
     else:
         print("스티칭 실패")
+
+    cv2.Stitcher.create()
