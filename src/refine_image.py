@@ -64,12 +64,9 @@ def stitch_image(src_dir, dst_dir=None, crop_level=0, pano_confident_thresh=1.0)
         images.append(img)
         index += 1
 
-    stitcher = cv2.Stitcher.create(mode=cv2.Stitcher_SCANS)
-    # stitcher.setPanoConfidenceThresh(pano_confident_thresh)
-    status, stitched_image = stitcher.stitch(images)
+    status, stitched_image = stitch_divide_and_conquer(images, batch_size=2, dst_path=dst_path)
 
     if status == cv2.Stitcher_OK:
-
         print(f'Stitched image will be saved : {dst_path}')
         cv2.imwrite(f'{dst_path}.jpg', stitched_image)
     else:
@@ -77,3 +74,49 @@ def stitch_image(src_dir, dst_dir=None, crop_level=0, pano_confident_thresh=1.0)
 
     # 현재 시각을 출력
     print("현재 시각 : ", datetime.datetime.now())
+
+
+def stitch_all_in_one(images):
+    stitcher = cv2.Stitcher.create(mode=cv2.Stitcher_SCANS)
+    status, stitched_image = stitcher.stitch(images)
+
+    if status == cv2.Stitcher_OK:
+        return stitched_image, status
+    else:
+        return None, status
+
+
+def stitch_divide_and_conquer(images, batch_size=2, dst_path="output"):
+
+    stitcher = cv2.Stitcher.create(mode=cv2.Stitcher_SCANS)
+
+    input_images = images
+
+    n_patch = (len(input_images) // batch_size) + 1
+    print(f"n_patch : {n_patch}")
+
+    stitched_images = []
+
+    _round = 0
+
+    while len(input_images) > 1:
+        print(f"round : {_round} ")
+        for i in range(n_patch):
+            print(f"patch : {i} / {n_patch}")
+            start = i * batch_size
+            end = min((i + 1) * batch_size, len(input_images))
+
+            status, stitched_image = stitcher.stitch(input_images[start:end])
+
+            if status == cv2.Stitcher_OK:
+                stitched_images.append(stitched_image)
+                cv2.imwrite(f"{dst_path}_stitched_round{_round}_step{i}.jpg", stitched_image)
+            else:
+                print(f"stitching failed at {i}th patch in {_round}th round")
+
+        input_images = stitched_images
+        stitched_images = []
+        _round += 1
+
+    return 1, input_images[0]
+
