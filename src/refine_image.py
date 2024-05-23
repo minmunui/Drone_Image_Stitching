@@ -92,7 +92,9 @@ def stitch_divide_and_conquer(images, batch_size=2, dst_path="output", pano_conf
     stitcher.setPanoConfidenceThresh(pano_confident_thresh)
 
     input_images = images
+
     input_image_names = []
+    next_input_image_names = []
 
     stitched_images = []
 
@@ -100,7 +102,7 @@ def stitch_divide_and_conquer(images, batch_size=2, dst_path="output", pano_conf
 
     while len(input_images) > 1:
         n_patch = (len(input_images) // batch_size) + 1
-        print(f"round : {_round} ")
+        print(f"round : {_round} | input images : {len(input_images)}")
         for i in range(n_patch):
             print(f"patch : {i} / {n_patch}")
             start = i * batch_size
@@ -111,7 +113,7 @@ def stitch_divide_and_conquer(images, batch_size=2, dst_path="output", pano_conf
             if status == cv2.Stitcher_OK:
                 stitched_images.append(stitched_image)
                 cv2.imwrite(f"{dst_path}_stitched_round{_round}_step{i}.jpg", stitched_image)
-                input_image_names.append(f"{dst_path}_stitched_round{_round}_step{i}.jpg")
+                next_input_image_names.append(f"{dst_path}_stitched_round{_round}_step{i}.jpg")
             else:
                 print(f"stitching failed at {i}th patch in {_round}th round")
                 if _round > 0:
@@ -121,7 +123,8 @@ def stitch_divide_and_conquer(images, batch_size=2, dst_path="output", pano_conf
 
         input_images = stitched_images
         stitched_images = []
-        input_image_names = []
+        input_image_names = next_input_image_names
+        next_input_image_names = []
         _round += 1
 
     return 1, input_images[0]
