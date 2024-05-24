@@ -35,7 +35,7 @@ def remove_black_with_iterate(image):
     return image
 
 
-def stitch_image(src_dir, dst_dir=None, crop_level=0, pano_confident_thresh=1.0):
+def stitch_image(src_dir, dst_dir=None, crop_level=0, pano_confident_thresh=0.5):
     # 현재 시각
     print("현재 시각 : ", datetime.datetime.now())
     if dst_dir is None:
@@ -64,7 +64,8 @@ def stitch_image(src_dir, dst_dir=None, crop_level=0, pano_confident_thresh=1.0)
         images.append(img)
         index += 1
 
-    status, stitched_image = stitch_divide_and_conquer(images, batch_size=2, dst_path=dst_path)
+    # status, stitched_image = stitch_divide_and_conquer(images, patch_size=7, dst_path=dst_path, image_names=file_names, pano_confident_thresh=pano_confident_thresh)
+    status, stitched_image = stitch_all_in_one(images, pano_confident_thresh=pano_confident_thresh)
 
     if status == cv2.Stitcher_OK:
         print(f'Stitched image will be saved : {dst_path}')
@@ -76,9 +77,9 @@ def stitch_image(src_dir, dst_dir=None, crop_level=0, pano_confident_thresh=1.0)
     print("현재 시각 : ", datetime.datetime.now())
 
 
-def stitch_all_in_one(images):
+def stitch_all_in_one(images, pano_confident_thresh=1.0):
     stitcher = cv2.Stitcher.create(mode=cv2.Stitcher_SCANS)
-    status, stitched_image = stitcher.stitch(images)
+    status, stitched_image = stitcher.stitch(images, pano_confident_thresh=pano_confident_thresh)
 
     if status == cv2.Stitcher_OK:
         return stitched_image, status
@@ -86,14 +87,14 @@ def stitch_all_in_one(images):
         return None, status
 
 
-def stitch_divide_and_conquer(images, batch_size=2, dst_path="output", pano_confident_thresh=1.0):
+def stitch_divide_and_conquer(images, patch_size=4, dst_path="output", pano_confident_thresh=1.0, image_names=None):
 
     stitcher = cv2.Stitcher.create(mode=cv2.Stitcher_SCANS)
     stitcher.setPanoConfidenceThresh(pano_confident_thresh)
 
     input_images = images
 
-    input_image_names = []
+    input_image_names = image_names
     next_input_image_names = []
 
     stitched_images = []
@@ -101,22 +102,32 @@ def stitch_divide_and_conquer(images, batch_size=2, dst_path="output", pano_conf
     _round = 0
 
     while len(input_images) > 1:
-        n_patch = (len(input_images) // batch_size) + 1
+        n_patch = (len(input_images) // patch_size) + 1
         print(f"round : {_round} | input images : {len(input_images)}")
         for i in range(n_patch):
+
             print(f"patch : {i} / {n_patch}")
-            start = i * batch_size
-            end = min((i + 1) * batch_size, len(input_images))
+            start = i * patch_size
+            end = min((i + 1) * patch_size, len(input_images))
+
+            if end - start <= 1:
+                stitched_images.append(input_images[start])
+                input_image_names.append(input_image_names[start])
+                continue
+
+            print(f"start : {start} | end : {end}")
+            print("input images : ", input_image_names[start:end])
 
             status, stitched_image = stitcher.stitch(input_images[start:end])
 
             if status == cv2.Stitcher_OK:
                 stitched_images.append(stitched_image)
-                cv2.imwrite(f"{dst_path}_stitched_round{_round}_step{i}.jpg", stitched_image)
-                next_input_image_names.append(f"{dst_path}_stitched_round{_round}_step{i}.jpg")
+                cv2.imwrite(f"{dst_path}_patch{patch_size}_stitched_round{_round}_step{i}_th{pano_confident_thresh}.jpg", stitched_image)
+                print(f"complete -> patch{patch_size}_stitched_round{_round}_step{i}.jpg")
+                next_input_image_names.append(f"patch{patch_size}_stitched_round{_round}_step{i}_th{pano_confident_thresh}.jpg")
             else:
                 print(f"stitching failed at {i}th patch in {_round}th round")
-                if _round > 0:
+                if input_image_names is not None:
                     print("failed images :")
                     for name in input_image_names[start:end]:
                         print(name)
@@ -127,5 +138,5 @@ def stitch_divide_and_conquer(images, batch_size=2, dst_path="output", pano_conf
         next_input_image_names = []
         _round += 1
 
-    return 1, input_images[0]
+    return cv2.Stitcher_OK, input_images[0]
 
